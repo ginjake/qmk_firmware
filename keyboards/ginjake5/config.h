@@ -26,7 +26,7 @@
 /* ws2812 RGB LED */
 #define RGB_DI_PIN D3
 
-#define RGBLED_NUM 0    // Number of LEDs
+#define RGBLED_NUM 5    // Number of LEDs
 
 #define RGBLIGHT_ANIMATIONS
 #define BACKLIGHT_LEVELS 5
