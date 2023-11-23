@@ -1,22 +1,11 @@
-# MCU name
-MCU = atmega32u4
-
-# Bootloader selection
-#   Teensy       halfkay
-#   Pro Micro    caterina
-#   Atmel DFU    atmel-dfu
-#   LUFA DFU     lufa-dfu
-#   QMK DFU      qmk-dfu
-#   ATmega32A    bootloadHID
-#   ATmega328P   USBasp
-BOOTLOADER = caterina
-
 # QMK Standard Build Options
 #   change to "no" to disable the options, or define them in the Makefile in
 #   the appropriate keymap folder that will get included automatically
 #
 #   See TOP/docs/config_options.md for more information.
 #
+SRC += matrix.c
+
 BOOTMAGIC_ENABLE = no   # Virtual DIP switch configuration
 MOUSEKEY_ENABLE = no    # Mouse keys
 EXTRAKEY_ENABLE = no    # Audio control and System control
@@ -36,13 +25,3 @@ AUDIO_ENABLE = no       # Audio output on port C6
 FAUXCLICKY_ENABLE = no  # Use buzzer to emulate clicky switches
 HD44780_ENABLE = no     # Enable support for HD44780 based LCDs
 
-DEFAULT_FOLDER = ec_helix/rev2
-
-CUSTOM_MATRIX = yes
-
-SRC += rev2/matrix.c
-
-# Link-Time-Optimization: for small firmware
-LTO_ENABLE = yes
-
-SPLIT_KEYBOARD = yes

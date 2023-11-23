@@ -18,5 +18,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "config_common.h"
+#define SPLIT_HAND_PIN B5
 
+#define QUICK_TAP_HOLD 0
+
+#define CHARGE_PIN B2
+#define ADC_PIN B6
+
+#define OLED_FONT_H "common/glcdfont.c"
+
+#if defined(RGBLIGHT_ENABLE) && !defined(IOS_DEVICE_ENABLE)
+// USB_MAX_POWER_CONSUMPTION value for Helix keyboard
+//  120  RGBoff, OLEDoff
+//  120  OLED
+//  330  RGB 6
+//  300  RGB 32
+//  310  OLED & RGB 32
+  #define USB_MAX_POWER_CONSUMPTION 400
+#else
+  // fix iPhone and iPad power adapter issue
+  // iOS device need lessthan 100
+  #define USB_MAX_POWER_CONSUMPTION 100
+#endif

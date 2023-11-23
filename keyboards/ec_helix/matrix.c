@@ -33,18 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "transport.h"
 #include "quantum.h"
 
-#ifndef DEBOUNCE
-#  define DEBOUNCE 5
-#endif
-
 #define ERROR_DISCONNECT_COUNT 5
-
-#ifndef CHARGE_PIN
-#define CHARGE_PIN B2
-#endif
-#ifndef ADC_PIN
-#define ADC_PIN B6
-#endif
 
 #define ROWS_PER_HAND (MATRIX_ROWS/2)
 #define KEY_NUM (MATRIX_COLS*ROWS_PER_HAND)
@@ -129,7 +118,7 @@ typedef struct{
 
 filter_info filter[KEY_NUM];
 
-void finter_config(filter_info *f, float fc, float q, float fs){
+void filter_config(filter_info *f, float fc, float q, float fs){
 
     //fc Digital LPF cutoff frequency
     //q  Quality factor (1 / sqrt (2) default)
@@ -156,13 +145,6 @@ float filter_process(filter_info *f, float val){
     return result;
 }
 
-/* Spin WAIT */
-void spin_wait(volatile uint32_t time){
-    while(time>0){
-        time--;
-    }
-}
-
 // KEY SCAN PROCESS
 uint16_t get_one_key_val(uint16_t k){
     uint8_t c,r;
@@ -172,11 +154,11 @@ uint16_t get_one_key_val(uint16_t k){
     cli();
 
     // LINE SELECT
-    for(uint8_t pin=0;pin<sizeof(col_pins)/sizeof(col_pins[0]);pin++){
+    for(uint8_t pin=0;pin<MATRIX_COLS/2;pin++){
         if(c & (1<<pin)){
-            PORTx_ADDRESS(col_pins[pin]) |= _BV((col_pins[pin])&0xF);
+            PORTx_ADDRESS(col_pins[pin*2]) |= _BV((col_pins[pin*2])&0xF);
         }else{
-            PORTx_ADDRESS(col_pins[pin]) &= ~_BV((col_pins[pin])&0xF);
+            PORTx_ADDRESS(col_pins[pin*2]) &= ~_BV((col_pins[pin*2])&0xF);
         }
     }
     _barrier();
@@ -185,15 +167,11 @@ uint16_t get_one_key_val(uint16_t k){
     PORTx_ADDRESS(CHARGE_PIN) &= ~_BV((CHARGE_PIN)&0xF);
     _barrier();
 
-    // SPIN WAIT
-    spin_wait(20);
+    wait_us(80);
 
     // CHARGE
     PORTx_ADDRESS(row_pins[r]) |= _BV((row_pins[r])&0xF);
     _barrier();
-
-    // SPIN WAIT
-    //spin_wait(1);
 
     // ADC Start
     ADCSRA |= (_BV(ADIF)|_BV(ADSC));
@@ -221,16 +199,14 @@ void init_calibrate_info(void){
     // Ramp-Up
     for(uint16_t k=0;k<KEY_NUM;k++){
         tmp = get_one_key_val(k);
-        // SPIN WAIT(While DISCHARGE COMPLETE)
-        spin_wait(10);
+        wait_us(30);
     }
 
     // Calibration
     for(uint16_t i=0;i<CALIBRATE_INI;i++){
         for(uint16_t k=0;k<KEY_NUM;k++){
             buf[k] += get_one_key_val(k);
-            // SPIN WAIT(While DISCHARGE COMPLETE)
-            spin_wait(10);
+            wait_us(30);
         }
     }
 
@@ -249,11 +225,11 @@ void init_calibrate_info(void){
 static void init_pins(void) {
     uint8_t pin;
     // Output Pin
-    for(pin=0;pin<sizeof(row_pins)/sizeof(row_pins[0]);pin++){
+    for(pin=0;pin<ROWS_PER_HAND;pin++){
         DDRx_ADDRESS(row_pins[pin]) |= _BV((row_pins[pin])&0xF);
     }
-    for(pin=0;pin<sizeof(col_pins)/sizeof(col_pins[0]);pin++){
-        DDRx_ADDRESS(col_pins[pin]) |= _BV((col_pins[pin])&0xF);
+    for(pin=0;pin<MATRIX_COLS/2;pin++){
+        DDRx_ADDRESS(col_pins[pin*2]) |= _BV((col_pins[pin*2])&0xF);
     }
     DDRx_ADDRESS(CHARGE_PIN) |= _BV((CHARGE_PIN)&0xF);
 
@@ -380,16 +356,14 @@ void matrix_init(void)
     // Filter config
     for(uint8_t k=0;k<KEY_NUM;k++){
         // Low Pass Filter Init
-        finter_config(&filter[k], DEFAULT_LOWPASS_HZ, DEFAULT_FILTER_Q, DEFAULT_SAMPLE_HZ);
+        filter_config(&filter[k], DEFAULT_LOWPASS_HZ, DEFAULT_FILTER_Q, DEFAULT_SAMPLE_HZ);
 		debounce[k]=0;
     }
-
-    matrix_init_quantum();
 
     split_post_init();
 }
 
-static bool matrix_post_scan(void) {
+bool matrix_post_scan(void) {
     if (!is_keyboard_master()) {
         transport_slave(matrix + thatHand, matrix + thisHand);
         //matrix_slave_scan_user();
@@ -418,7 +392,6 @@ static bool matrix_post_scan(void) {
             }
         }
     }
-    matrix_scan_quantum();
     return changed;
 }
 
