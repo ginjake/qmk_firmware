@@ -15,8 +15,18 @@
 5 上側は飾りなので、適当な抵抗をつけてもつけなくても大丈夫
 
 # 環境構築
-本家ドキュメント参照  
-https://docs.qmk.fm/#/newbs_getting_started
+本家ドキュメントを参照してqmkを入れる 
+https://docs.qmk.fm/#/newbs_getting_started  
+
+下記コマンドを実行してファイルをダウンロード(gitが必要)  
+```
+git clone https://github.com/ginjake/qmk_firmware.git
+cd qmk_firmware  
+git checkout master  (←デフォルトがmasterブランチではないので注意)
+make git-submodule
+qmk setup  
+qmk compile -kb ginjake -km default:flash
+```
 
 # ファームの焼き方
 qmk compile -kb ginjake -km default:flash  
@@ -29,6 +39,6 @@ Hardware Supported: Pro Micro,
 
 Make example for this keyboard (after setting up your build environment):
 
-    qmk compile -kb ginjake -km default
+    qmk compile -kb ginjake -km default:flash
 
 See the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/n
