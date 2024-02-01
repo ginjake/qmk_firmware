@@ -15,11 +15,22 @@
 5 上側は飾りなので、適当な抵抗をつけてもつけなくても大丈夫
 
 # 環境構築
-本家ドキュメント参照  
-https://docs.qmk.fm/#/newbs_getting_started
+本家ドキュメントを参照してqmkを入れる 
+https://docs.qmk.fm/#/newbs_getting_started  
+
+下記コマンドを実行してファイルをダウンロード(gitが必要)
+git clone https://github.com/ginjake/qmk_firmware.git  
+cd qmk_firmware  
+git checkout master  (←デフォルトがmasterブランチではないので注意)
+make git-submodule
+qmk setup
+qmk compile -kb ginjake -km default:flash
 
 #LEDについて
 sk6812miniに対応していますが、上級者向けなので分かっている人以外はおすすめしません
+
+
+
 
 # ファームの焼き方
 qmk compile -kb ginjake -km default:flash  
