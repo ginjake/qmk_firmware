@@ -25,7 +25,7 @@ cd qmk_firmware
 git checkout master  (←デフォルトがmasterブランチではないので注意)
 make git-submodule
 qmk setup  
-qmk compile -kb ginjake -km default:flash
+qmk compile -kb ginjake5 -km default:flash
 ```
   
 #LEDについて
