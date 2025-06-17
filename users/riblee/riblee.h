@@ -18,20 +18,23 @@
 
 #include QMK_KEYBOARD_H
 
-enum preonic_layers {
+enum layer_names {
     _QWERTY,
+    _HUNGARIAN,
     _COLEMAK,
     _DVORAK,
+    _WORKMAN,
     _LOWER,
     _RAISE,
     _ADJUST
 };
 
-enum preonic_keycodes {
+enum custom_keycodes {
     QWERTY = SAFE_RANGE,
+    HUNGARIAN,
     COLEMAK,
     DVORAK,
-    BACKLIT
+    WORKMAN,
 };
 
 #define LOWER MO(_LOWER)
@@ -46,11 +49,11 @@ enum {
     TD_U,
 };
 
-void dance_key_a (qk_tap_dance_state_t *, void *);
-void dance_key_e (qk_tap_dance_state_t *, void *);
-void dance_key_i (qk_tap_dance_state_t *, void *);
-void dance_key_o (qk_tap_dance_state_t *, void *);
-void dance_key_u (qk_tap_dance_state_t *, void *);
+void dance_key_a (tap_dance_state_t *, void *);
+void dance_key_e (tap_dance_state_t *, void *);
+void dance_key_i (tap_dance_state_t *, void *);
+void dance_key_o (tap_dance_state_t *, void *);
+void dance_key_u (tap_dance_state_t *, void *);
 
 layer_state_t layer_state_set_user(layer_state_t);
 bool process_record_user(uint16_t keycode, keyrecord_t *record);
