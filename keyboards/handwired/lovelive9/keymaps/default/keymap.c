@@ -1,5 +1,5 @@
 #include QMK_KEYBOARD_H
-
+#include "raw_hid.h"
 //#include "v1.h"
 
 //Following line allows macro to read current RGB settings
@@ -8,331 +8,409 @@ rgblight_config_t RGB_current_config;
 
 #define KC_KANJI KC_GRV
 
-
-enum Layer
-{
-  _QWERTY,
-  _DIA,
-  _YOU,
-  _CHIKA,
-  _ZURA,
-  _RUBY,
-  _YOHANE,
-  _RIKO,
-  _MARI,
-  _KANAN,
-  _RUBY_SUB1,
-  _RUBY_SUB2,
-  _RUBY_SUB3,
-  _SCHOOL_IDOL_FESTIVAL
+enum layer_number {
+    _DEFAULT = 0,
+    _BLEND
 };
 
-#define SEND_DIA 100
-#define SEND_YOU 101
-#define SEND_CHIKA 102
-#define SEND_ZURA 103
-#define SEND_RUBY 104
-#define SEND_YOHANE 105
-#define SEND_RIKO 106
-#define SEND_MARI 107
-#define SEND_KANAN 108
 
-
+// カスタムキーコードを追加
 enum custom_keycodes {
-  QWERTY = SAFE_RANGE,
-  DIA,
-  YOU,
-  CHIKA,
-  ZURA,
-  RUBY,
-  RUBY_SUB1,
-  RUBY_SUB2,
-  RUBY_SUB3,
-  YOHANE,
-  RIKO,
-  MARI,
-  KANAN,
-  TO_SCHOOL_IDOL_FESTIVAL,
-  RETURN_SCHOOL_IDOL_FESTIVAL
+  PL1_BLEND = SAFE_RANGE,  // 短押し：プレイリスト1、長押し：ブレンドレイヤー
+  PREV_VIDEO,              // 前の動画へ
+  REWIND_15S,              // 15秒巻き戻し
+  REWIND_1S,               // 1秒巻き戻し
+  PLAY_STOP,               // 再生/停止
+  FORWARD_5S,              // 5秒先へ
+  FORWARD_15S,             // 15秒先へ
+  NEXT_VIDEO,              // 次の動画へ
+  PLAYLIST2,               // プレイリスト2選択
+  
+  // ブレンドレイヤー用
+  TO_DEFAULT_P1,           // デフォルトレイヤー切り替え＆プレイリスト1選択
+  BLEND_IGNORE_TOGGLE,     // ブレンド無視モードON/OFF
+  BLEND_TO_0,              // blend率を0に
+  BLEND_DOWN,              // blend率を少しずつ下げる
+  BLEND_SPEED_3X,          // 押してるときはblend率上げ下げの速度が3倍
+  BLEND_UP,                // blend率を少しずつ上げる
+  BLEND_TO_100,            // blend率を100に
+  TO_DEFAULT_P2,           // デフォルトレイヤー切り替え＆プレイリスト2選択
 };
 
 
 int long_tap_timer;
+static uint16_t led_update_timer = 0;
+static uint8_t pending_led_update = 0;
+static bool pending_default_led = false;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-  [_QWERTY] = LAYOUT(
-    DIA, YOU, CHIKA, ZURA, RUBY, YOHANE, RIKO, MARI, KANAN
-  ),
-  [_DIA] = LAYOUT(
-    DIA, KC_A, KC_B, KC_C, KC_D, KC_E, KC_F, KC_G, KC_LSFT
+  [_DEFAULT] = LAYOUT(
+    PL1_BLEND, PREV_VIDEO, REWIND_15S, REWIND_1S, PLAY_STOP, FORWARD_5S, FORWARD_15S, NEXT_VIDEO, PLAYLIST2
   ),
 
-  [_YOU] = LAYOUT(
-    KC_H, YOU, KC_I, KC_J, KC_K, KC_L, KC_M, KC_N, KC_LSFT
-  ),
-
-  [_CHIKA] = LAYOUT(
-    KC_O, KC_P, CHIKA, KC_Q, KC_R, KC_S, KC_T, KC_U, KC_LSFT
-  ),
-
-  [_ZURA] = LAYOUT(
-    KC_V, KC_W, KC_X, ZURA, KC_Y, KC_Z, KC_M, KC_N, KC_LSFT
-  ),
-
-  //推しをたくさん押せるようにルビーちゃんには複数のレイヤー設定
-  [_RUBY] = LAYOUT(
-    KC_CIRC, KC_LPRN, KC_QUOT, RUBY_SUB1, RUBY, RUBY_SUB2, KC_LCBR, KC_EXLM, KC_LSFT
-  ),
-  [_RUBY_SUB1] = LAYOUT(
-    KC_RCBR, KC_AT, KC_PIPE, RUBY_SUB1, RUBY, RUBY_SUB2, KC_HASH, KC_EQL, KC_LSFT
-  ),
-  [_RUBY_SUB2] = LAYOUT(
-    KC_TILD, KC_DLR, KC_LBRC, RUBY_SUB1, RUBY, RUBY_SUB2, KC_PERC, KC_RBRC, KC_LSFT
-  ),
-  [_RUBY_SUB3] = LAYOUT(
-    TO_SCHOOL_IDOL_FESTIVAL, KC_DLR, KC_LBRC, RUBY_SUB1, RUBY, RUBY_SUB2, KC_PERC, KC_RBRC, RETURN_SCHOOL_IDOL_FESTIVAL
-  ),
-
-  [_YOHANE] = LAYOUT(
-    KC_0, KC_1, KC_2, KC_3, KC_4, YOHANE, KC_5, KC_6, KC_LSFT
-  ),
-
-  [_RIKO] = LAYOUT(
-    KC_7, KC_8, KC_9, KC_PLUS, KC_MINS, KC_ASTR, RIKO, KC_SLSH, KC_LSFT
-  ),
-
-  [_MARI] = LAYOUT(
-    KC_TAB, KC_DEL, KC_COMM, KC_SPC, KC_ENT, KC_BSPC, KC_DOT, MARI, KC_LSFT
-  ),
-
-  [_KANAN] = LAYOUT(
-    KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_ENT, KC_BSPC, KC_AMPR, KC_KANJI, KANAN
-  ),
-  [_SCHOOL_IDOL_FESTIVAL] = LAYOUT(
-    KC_1, KC_2, KC_3, KC_4, KC_5, KC_6, KC_7, KC_8, KC_9
+  [_BLEND] = LAYOUT(
+    TO_DEFAULT_P1, BLEND_IGNORE_TOGGLE, BLEND_TO_0, BLEND_DOWN, BLEND_SPEED_3X, BLEND_UP, BLEND_TO_100, KC_NO, TO_DEFAULT_P2
   ),
 };
 
-void check_tap_and_send_key(int MEMBER) {
-  if (long_tap_timer < 500) {
-    switch (MEMBER) {
-      case SEND_DIA:
-        SEND_STRING("KUROSAWA DIA");
-      break;
-      case SEND_YOU:
-        SEND_STRING("WATANABE YOU");
-      break;
-      case SEND_CHIKA:
-        SEND_STRING("TAKAMI CHIKA");
-      break;
-      case SEND_ZURA:
-        SEND_STRING("KUNIKIDA HANAMARU");
-      break;
-      case SEND_RUBY:
-        SEND_STRING("KUROSAWA RUBY");
-      break;
-      case SEND_YOHANE:
-        SEND_STRING("TSUSHIMA YOSHIKO");
-      break;
-      case SEND_RIKO:
-        SEND_STRING("SAKURAUCHI RIKO");
-      break;
-      case SEND_MARI:
-        SEND_STRING("OHARA MARI");
-      break;
-      case SEND_KANAN:
-        SEND_STRING("MATSUURA KANAN");
-      break;
-      }
-  }
-  long_tap_timer = 0;
-}
 
 int aqours_color_h[] = { 26, 340, 150,   0, 199, 220, 53, 265, 322};
 int aqours_color_s[] = {255, 165, 255, 255, 255, 350, 255, 255, 255};
 int aqours_color_v[] = {255, 255, 255, 255, 255, 255, 200, 255, 255};
 
-void LED_default_set(void) {
+// LED状態管理
+static uint8_t current_playlist = 1; // 1: プレイリスト1, 2: プレイリスト2
+static bool blend_ignore_mode = false;
 
-  sethsv(aqours_color_h[2], aqours_color_s[2], aqours_color_v[2], (LED_TYPE *)&led[0]);
-  sethsv(aqours_color_h[7], aqours_color_s[7], aqours_color_v[7], (LED_TYPE *)&led[1]);
-  sethsv(aqours_color_h[1], aqours_color_s[1], aqours_color_v[1], (LED_TYPE *)&led[2]);
-  sethsv(aqours_color_h[5], aqours_color_s[5], aqours_color_v[5], (LED_TYPE *)&led[3]);
-  sethsv(aqours_color_h[8], aqours_color_s[8], aqours_color_v[8], (LED_TYPE *)&led[4]);
-  sethsv(aqours_color_h[6], aqours_color_s[6], aqours_color_v[6], (LED_TYPE *)&led[5]);
-  sethsv(aqours_color_h[0], aqours_color_s[0], aqours_color_v[0], (LED_TYPE *)&led[6]);
-  sethsv(aqours_color_h[4], aqours_color_s[4], aqours_color_v[4], (LED_TYPE *)&led[7]);
-  sethsv(aqours_color_h[3], aqours_color_s[3], aqours_color_v[3], (LED_TYPE *)&led[8]);
+// LED遅延更新用
+static bool pending_blend_ignore_led = false;
 
-  rgblight_set();
-
-}
-
-
-void LED_layer_set(int aqours_index) {
-  for (int c = 0; c < 9; c++) {
-    sethsv(aqours_color_h[aqours_index], aqours_color_s[aqours_index], aqours_color_v[aqours_index], (LED_TYPE *)&led[c]);
+void LED_playlist1_set(void) {
+  // 全LEDを赤に
+  for (int i = 0; i < 9; i++) {
+    sethsv(0, 255, 255, (LED_TYPE *)&led[i]); // 赤
   }
+  
+  // ブレンド無視モードがONなら2番目のLEDを黄色に
+  if (blend_ignore_mode) {
+    sethsv(220, 255, 255, (LED_TYPE *)&led[7]);
+  }
+  
   rgblight_set();
 }
 
+void LED_playlist2_set(void) {
+  // 全LEDを青に
+  for (int i = 0; i < 9; i++) {
+    sethsv(170, 255, 255, (LED_TYPE *)&led[i]); // 青（HSV: 170度）
+  }
+  
+  // ブレンド無視モードがONなら2番目のLEDを黄色に
+  if (blend_ignore_mode) {
+    sethsv(220, 255, 255, (LED_TYPE *)&led[7]);
+  }
+  
+  rgblight_set();
+}
 
+void LED_blend_layer_set(void) {
+  // 全LEDを緑に
+  for (int i = 0; i < 9; i++) {
+    sethsv(85, 255, 255, (LED_TYPE *)&led[i]); // 緑（HSV: 85度）
+  }
+  
+  // ブレンド無視モードがONなら2番目のLEDを黄色に
+  if (blend_ignore_mode) {
+    sethsv(220, 255, 255, (LED_TYPE *)&led[7]);
+  }
+  
+  rgblight_set();
+}
+
+void LED_default_set(void) {
+  if (current_playlist == 1) {
+    LED_playlist1_set();
+  } else {
+    LED_playlist2_set();
+  }
+}
+
+
+void LED_default_set_delayed(void) {
+  pending_default_led = true;
+  pending_led_update = 0;
+  led_update_timer = timer_read();
+}
+
+void LED_blend_ignore_set_delayed(void) {
+  pending_blend_ignore_led = true;
+  led_update_timer = timer_read();
+}
+
+// Raw HID送信用のヘルパー関数
+void send_hid_control_message(uint8_t button_id, uint8_t value) {
+  uint8_t data[32] = {0}; // 32バイトバッファを0で初期化
+  
+  data[0] = 0x01;        // メッセージタイプ（コントロール）
+  data[1] = button_id;   // ボタンID (1-15)
+  data[2] = value;       // 値 (0 or 127)
+  data[3] = 0x00;        // 予約
+  
+  raw_hid_send(data, 32);
+}
+
+// Raw HID受信処理（将来のElectron→QMK通信用）
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+  if (length != 32) return;
+  
+  // 受信データ処理（例：LED制御など）
+  if (data[0] == 0x02) { // LEDコントロール
+    // 将来的にElectronからLED制御を受信する場合
+  }
+}
+
+
+// カスタムTap-Hold処理用
+static uint16_t pl1_blend_timer = 0;
+static bool pl1_blend_pressed = false;
+static bool pl1_blend_hold_triggered = false;
+#define TAPPING_TERM_PL1 300  // 300ms でタップ/ホールドを判定
+
+// BLEND制御用
+static bool blend_down_pressed = false;
+static bool blend_up_pressed = false;
+static uint16_t blend_control_timer = 0;
+#define BLEND_CONTROL_INTERVAL 50  // 50ms間隔でBLEND値を変更
+
+// レイヤー状態変化検知
+layer_state_t layer_state_set_user(layer_state_t state) {
+  if (IS_LAYER_ON_STATE(state, _BLEND)) {
+    // ブレンドレイヤーがアクティブになった
+    LED_blend_layer_set();
+  } else {
+    // デフォルトレイヤーに戻った
+    LED_default_set();
+  }
+  return state;
+}
+
+void keyboard_post_init_user(void) {
+    current_playlist = 1;      // プレイリスト1をデフォルト選択
+    blend_ignore_mode = false; // ブレンド無視モード初期値OFF
+    LED_default_set();
+    layer_clear();             // 念のため全レイヤーをクリア
+    layer_on(_DEFAULT);        // デフォルトレイヤーを確実にオン
+}
+// カスタムTap-Hold処理
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-
   switch (keycode) {
-
-    case DIA:
+    case PL1_BLEND:
       if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_DIA);
-        LED_layer_set(3);
+        // キーが押された：タイマー開始
+        pl1_blend_timer = timer_read();
+        pl1_blend_pressed = true;
+        pl1_blend_hold_triggered = false;
       } else {
-        check_tap_and_send_key(SEND_DIA);
-        layer_off(_DIA);
-        LED_default_set();
-      }
-      break;
-
-    case YOU:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_YOU);
-        LED_layer_set(4);
-      } else {
-        check_tap_and_send_key(SEND_YOU);
-        layer_off(_YOU);
-        LED_default_set();
-      }
-      break;
-
-    case CHIKA:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_CHIKA);
-        LED_layer_set(0);
-      } else {
-        check_tap_and_send_key(SEND_CHIKA);
-        layer_off(_CHIKA);
-        LED_default_set();
-      }
-      break;
-
-    case ZURA:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_ZURA);
-        LED_layer_set(6);
-      } else {
-        check_tap_and_send_key(SEND_ZURA);
-        layer_off(_ZURA);
-        LED_default_set();
-      }
-      break;
-
-    case RUBY:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_RUBY);
-        LED_layer_set(8);
-      } else {
-        check_tap_and_send_key(SEND_RUBY);
-        layer_off(_RUBY);
-        LED_default_set();
-      }
-      break;
-    case RUBY_SUB1:
-      if (record->event.pressed) {
-        layer_on(_RUBY_SUB1);
-        if (IS_LAYER_ON(_RUBY_SUB1) && IS_LAYER_ON(_RUBY_SUB2)) {
-          layer_on(_RUBY_SUB3);
-        } else {
-          layer_off(_RUBY_SUB3);
+        // キーが離された
+        pl1_blend_pressed = false;
+        
+        if (!pl1_blend_hold_triggered) {
+          // ホールドがトリガーされていない = 短押し（タップ）
+          current_playlist = 1;
+          send_hid_control_message(1, 127);
+          LED_default_set_delayed();
+          // すぐにリリースイベント送信
+          send_hid_control_message(1, 0);
         }
+        // ホールドがトリガーされている場合は何もしない（既にブレンドレイヤー）
+      }
+      return false;
+      
+    case PLAYLIST2:
+      if (record->event.pressed) {
+        current_playlist = 2;
+        send_hid_control_message(9, 127);
+        LED_default_set_delayed();
       } else {
-        layer_off(_RUBY_SUB1);
+        send_hid_control_message(9, 0);
       }
       break;
-    case RUBY_SUB2:
+      
+    case PREV_VIDEO:
       if (record->event.pressed) {
-        layer_on(_RUBY_SUB2);
-        if (IS_LAYER_ON(_RUBY_SUB1) && IS_LAYER_ON(_RUBY_SUB2)) {
-          layer_on(_RUBY_SUB3);
-        } else {
-          layer_off(_RUBY_SUB3);
-        }
+        send_hid_control_message(2, 127);
       } else {
-        layer_off(_RUBY_SUB2);
+        send_hid_control_message(2, 0);
+      }
+      break;
+      
+    case REWIND_15S:
+      if (record->event.pressed) {
+        send_hid_control_message(3, 127);
+      } else {
+        send_hid_control_message(3, 0);
+      }
+      break;
+      
+    case REWIND_1S:
+      if (record->event.pressed) {
+        send_hid_control_message(4, 127);
+      } else {
+        send_hid_control_message(4, 0);
+      }
+      break;
+      
+    case PLAY_STOP:
+      if (record->event.pressed) {
+        send_hid_control_message(5, 127);
+      } else {
+        send_hid_control_message(5, 0);
+      }
+      break;
+      
+    case FORWARD_5S:
+      if (record->event.pressed) {
+        send_hid_control_message(6, 127);
+      } else {
+        send_hid_control_message(6, 0);
+      }
+      break;
+      
+    case FORWARD_15S:
+      if (record->event.pressed) {
+        send_hid_control_message(7, 127);
+      } else {
+        send_hid_control_message(7, 0);
+      }
+      break;
+      
+    case NEXT_VIDEO:
+      if (record->event.pressed) {
+        send_hid_control_message(8, 127);
+      } else {
+        send_hid_control_message(8, 0);
+      }
+      break;
+      
+    // ブレンドレイヤー用
+    case TO_DEFAULT_P1:
+      if (record->event.pressed) {
+        layer_clear();
+        layer_on(_DEFAULT);
+        current_playlist = 1;
+        send_hid_control_message(10, 127);
+        // LEDは layer_state_set_user で自動設定される
+      } else {
+        send_hid_control_message(10, 0);
+      }
+      return false;
+      
+    case TO_DEFAULT_P2:
+      if (record->event.pressed) {
+        layer_clear();
+        layer_on(_DEFAULT);
+        current_playlist = 2;
+        send_hid_control_message(18, 127);
+        // LEDは layer_state_set_user で自動設定される
+      } else {
+        send_hid_control_message(18, 0);
+      }
+      return false;
+      
+    case BLEND_IGNORE_TOGGLE:
+      if (record->event.pressed) {
+        blend_ignore_mode = !blend_ignore_mode;
+        send_hid_control_message(11, 127); // 常に127で送信（押された信号）
+        LED_blend_ignore_set_delayed(); // 遅延LED更新
+      }
+      // リリースイベントは送信しない
+      return false; // QMKの標準処理を完全にスキップ
+      
+    case BLEND_TO_0:
+      if (record->event.pressed) {
+        send_hid_control_message(12, 127);
+      } else {
+        send_hid_control_message(12, 0);
+      }
+      break;
+      
+    case BLEND_DOWN:
+      if (record->event.pressed) {
+        blend_down_pressed = true;
+        blend_control_timer = timer_read();
+        send_hid_control_message(13, 127); // 初回送信
+      } else {
+        blend_down_pressed = false;
+        send_hid_control_message(13, 0);
+      }
+      break;
+      
+    case BLEND_SPEED_3X:
+      if (record->event.pressed) {
+        send_hid_control_message(14, 127);
+      } else {
+        send_hid_control_message(14, 0);
+      }
+      break;
+      
+    case BLEND_UP:
+      if (record->event.pressed) {
+        blend_up_pressed = true;
+        blend_control_timer = timer_read();
+        send_hid_control_message(15, 127); // 初回送信
+      } else {
+        blend_up_pressed = false;
+        send_hid_control_message(15, 0);
+      }
+      break;
+      
+    case BLEND_TO_100:
+      if (record->event.pressed) {
+        send_hid_control_message(16, 127);
+      } else {
+        send_hid_control_message(16, 0);
       }
       break;
 
-    case YOHANE:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_YOHANE);
-        LED_layer_set(5);
-      } else {
-        check_tap_and_send_key(SEND_YOHANE);
-        layer_off(_YOHANE);
-        LED_default_set();
-      }
-      break;
-
-    case RIKO:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_RIKO);
-        LED_layer_set(1);
-      } else {
-        check_tap_and_send_key(SEND_RIKO);
-        layer_off(_RIKO);
-        LED_default_set();
-      }
-      break;
-
-    case MARI:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_MARI);
-        LED_layer_set(7);
-      } else {
-        check_tap_and_send_key(SEND_MARI);
-        layer_off(_MARI);
-        LED_default_set();
-      }
-      break;
-
-    case KANAN:
-      if (record->event.pressed) {
-        long_tap_timer = 1;
-        layer_on(_KANAN);
-        LED_layer_set(2);
-      } else {
-        check_tap_and_send_key(SEND_KANAN);
-        layer_off(_KANAN);
-        LED_default_set();
-      }
-      break;
-
-    case TO_SCHOOL_IDOL_FESTIVAL:
-      if (record->event.pressed) {
-        LED_default_set();
-        layer_on(_SCHOOL_IDOL_FESTIVAL);
-      }
-      break;
-    case RETURN_SCHOOL_IDOL_FESTIVAL:
-      if (record->event.pressed) {
-        layer_off(_SCHOOL_IDOL_FESTIVAL);
-      }
-      break;
   }
 
   return true;
 }
 
 
+
 void matrix_scan_user(void) {
 
   if (long_tap_timer > 0) {
     long_tap_timer++;
+  }
+
+  // PL1_BLENDの長押し監視
+  if (pl1_blend_pressed && !pl1_blend_hold_triggered) {
+    if (timer_elapsed(pl1_blend_timer) >= TAPPING_TERM_PL1) {
+      // 300ms経過：ホールドトリガー、ブレンドレイヤーに切り替え
+      pl1_blend_hold_triggered = true;
+      layer_clear();
+      layer_on(_BLEND);
+      // LEDは layer_state_set_user で自動処理される
+    }
+  }
+
+  // BLEND_DOWN/UP連続制御
+  if ((blend_down_pressed || blend_up_pressed) && timer_elapsed(blend_control_timer) >= BLEND_CONTROL_INTERVAL) {
+    blend_control_timer = timer_read();
+    
+    if (blend_down_pressed) {
+      send_hid_control_message(13, 127);
+    }
+    if (blend_up_pressed) {
+      send_hid_control_message(15, 127);
+    }
+  }
+
+  // 遅延LED更新処理 (HID送信から20ms後)
+  if (timer_elapsed(led_update_timer) > 20) {
+    if (pending_default_led) {
+      LED_default_set();
+      pending_default_led = false;
+    } else if (pending_led_update > 0) {
+      pending_led_update = 0;
+    } else if (pending_blend_ignore_led) {
+      // BLEND無視モードLED更新
+      if (blend_ignore_mode) {
+        sethsv(220, 255, 255, (LED_TYPE *)&led[7]); // 黄色に設定
+      } else {
+        // 現在のレイヤーに応じて元の色に戻す
+        if (IS_LAYER_ON(_BLEND)) {
+          sethsv(85, 255, 255, (LED_TYPE *)&led[7]); // ブレンドレイヤーの緑
+        } else if (current_playlist == 1) {
+          sethsv(0, 255, 255, (LED_TYPE *)&led[7]); // プレイリスト1の赤
+        } else {
+          sethsv(170, 255, 255, (LED_TYPE *)&led[7]); // プレイリスト2の青
+        }
+      }
+      rgblight_set();
+      pending_blend_ignore_led = false;
+    }
   }
 }
